@@ -367,7 +367,7 @@ output: `HTTP/1.1 200 OK`
 🎉 Let's Celebrate
 
 
-## Requests and Responses
+## Requests and Responses (Tutorial 2)
 ### Request objects
 + The core functionality of the Request object is the request.data attribute, which is similar to request.POST, but more useful for working with Web APIs.
 ```
@@ -489,7 +489,7 @@ http --json POST http://127.0.0.1:8000/snippets/ code="print(456)"
 
 🎉Good Job
 
-## Class-based Views
+## Class-based Views (Tutorial 3)
 ### Rewriting our API using <mark>class-based views</mark>
 modify `views.py`:
 ```

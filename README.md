@@ -118,8 +118,7 @@ Note: but you should have to login in your admin
 
 🎉Good Job
 
-
-## Serialization
+## Generic setup for next tutorials:
 ```
 python3 -m venv env
 source env/bin/activate
@@ -265,6 +264,8 @@ from snippets.serializers import SnippetSerializer
 serializer = SnippetSerializer()
 print(repr(serializer))
 ```
+
+## Serialization
 
 Edit the snippets/views.py file, and add the following:
 ```

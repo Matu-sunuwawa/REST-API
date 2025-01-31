@@ -266,7 +266,7 @@ serializer = SnippetSerializer()
 print(repr(serializer))
 ```
 
-## Serialization
+## Serialization (Tutorial 1)
 
 Edit the snippets/views.py file, and add the following:
 ```

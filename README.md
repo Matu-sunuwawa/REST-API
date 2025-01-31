@@ -270,14 +270,13 @@ print(repr(serializer))
 
 Edit the snippets/views.py file, and add the following:
 ```
+
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from snippets.models import Snippet
 from snippets.serializers import SnippetSerializer
-```
-+ view that supports listing all the existing snippets, or creating a new snippet.
-```
+
 @csrf_exempt
 def snippet_list(request):
     """
@@ -295,9 +294,7 @@ def snippet_list(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-```
-+ We'll also need a view which corresponds to an individual snippet, and can be used to retrieve, update or delete the snippet.
-```
+
 @csrf_exempt
 def snippet_detail(request, pk):
     """
@@ -324,6 +321,8 @@ def snippet_detail(request, pk):
         snippet.delete()
         return HttpResponse(status=204)
 ```
++ view that supports listing all the existing snippets, or creating a new snippet.
++ We'll also need a view which corresponds to an individual snippet, and can be used to retrieve, update or delete the snippet.
 Finally we need to wire these views up. Create the snippets/urls.py file:
 ```
 from django.urls import path

@@ -323,7 +323,7 @@ def snippet_detail(request, pk):
 ```
 + view that supports listing all the existing snippets, or creating a new snippet.
 + We'll also need a view which corresponds to an individual snippet, and can be used to retrieve, update or delete the snippet.
-Finally we need to wire these views up. Create the snippets/urls.py file:
++ Finally we need to wire these views up. Create the snippets/urls.py file:
 ```
 from django.urls import path
 from snippets import views

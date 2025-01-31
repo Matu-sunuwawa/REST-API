@@ -244,7 +244,8 @@ output:
 # {'title': '', 'code': 'print("hello, world")', 'linenos': False, 'language': 'python', 'style': 'friendly'}
 # <Snippet: Snippet object>
 ```
-We can also serialize `querysets` instead of model instances. To do so we simply add a `many=True` flag to the serializer arguments.
+
+*We can also serialize `querysets` instead of model instances. To do so we simply add a `many=True` flag to the serializer arguments.
 ```
 serializer = SnippetSerializer(Snippet.objects.all(), many=True)
 serializer.data
@@ -619,6 +620,17 @@ class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
 + that's pretty concise and do the same operation as previous codes.
 
 🎉Let's Celebrate
+
+
+
+
+
+
+
+
+
+
+
 
 
 

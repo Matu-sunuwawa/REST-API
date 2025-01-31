@@ -488,7 +488,7 @@ http --json POST http://127.0.0.1:8000/snippets/ code="print(456)"
 🎉Good Job
 
 ## Class-based Views
-### Rewriting our API using class-based views
+### Rewriting our API using <mark>class-based views</mark>
 modify `views.py`:
 ```
 from snippets.models import Snippet
@@ -597,7 +597,7 @@ class SnippetDetail(mixins.RetrieveModelMixin,
 + `GenericAPIView`, `ListModelMixin` and `CreateModelMixin`: provides the core functionality, and the mixin classes provide the .list() and .create() actions.
 + `GenericAPIView` class to provide the core functionality, and adding in mixins to provide the .retrieve(), .update() and .destroy() actions.
 
-### Using generic class-based views
+### <mark>Using generic</mark> class-based views
 
 replace `views.py`:
 ```

@@ -224,7 +224,7 @@ At this point we've translated the model instance into Python native datatypes. 
 content = JSONRenderer().render(serializer.data)
 content
 ```
-*`Deserialization` is similar. First we parse a stream into Python native datatypes...
+### <mark>Deserialization</mark> is similar. First we parse a stream into Python native datatypes...
 ```
 import io
 

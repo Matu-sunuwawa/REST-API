@@ -365,6 +365,132 @@ output: `HTTP/1.1 200 OK`
 🎉 Let's Celebrate
 
 
+## Requests and Responses
+### Request objects
++ The core functionality of the Request object is the request.data attribute, which is similar to request.POST, but more useful for working with Web APIs.
+```
+request.POST  # Only handles form data.  Only works for 'POST' method.
+request.data  # Handles arbitrary data.  Works for 'POST', 'PUT' and 'PATCH' methods.
+```
+### Response objects
+```
+return Response(data)  # Renders to content type as requested by the client.
+```
+### Status codes
++ REST framework provides more explicit identifiers for each status code, such as HTTP_400_BAD_REQUEST in the status module.
+
+### Wrapping API views
+REST framework provides two wrappers you can use to write API views.
++ The @api_view decorator for working with function based views.
++ The APIView class for working with class-based views.
+These wrappers provide a few bits of functionality such as making sure you receive Request instances in your view, and adding context to Response objects so that content negotiation can be performed.
+  
+`views.py:`
+```
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from snippets.models import Snippet
+from snippets.serializers import SnippetSerializer
+
+
+@api_view(['GET', 'POST'])
+def snippet_list(request):
+    """
+    List all code snippets, or create a new snippet.
+    """
+    if request.method == 'GET':
+        snippets = Snippet.objects.all()
+        serializer = SnippetSerializer(snippets, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = SnippetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+def snippet_detail(request, pk):
+    """
+    Retrieve, update or delete a code snippet.
+    """
+    try:
+        snippet = Snippet.objects.get(pk=pk)
+    except Snippet.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SnippetSerializer(snippet)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        serializer = SnippetSerializer(snippet, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    elif request.method == 'DELETE':
+        snippet.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+```
+
+### Adding optional format suffixes to our URLs
++ Using format suffixes gives us URLs that explicitly refer to a given format, and means our API will be able to handle URLs such as http://example.com/api/items/4.json.
+```
+def snippet_list(request, format=None)
+```
+and
+```
+def snippet_detail(request, pk, format=None)
+```
+
+Now update the snippets/urls.py file slightly
+```
+from django.urls import path
+from rest_framework.urlpatterns import format_suffix_patterns
+from snippets import views
+
+urlpatterns = [
+    path('snippets/', views.snippet_list),
+    path('snippets/<int:pk>/', views.snippet_detail),
+]
+
+urlpatterns = format_suffix_patterns(urlpatterns)
+```
+We don't necessarily need to add these extra url patterns in, but it gives us a simple, clean way of referring to a specific format.
+RUN:
+```
+http http://127.0.0.1:8000/snippets/
+```
+We can control the format of the response that we get back, either by using the Accept header:
+```
+http http://127.0.0.1:8000/snippets/ Accept:application/json  # Request JSON
+http http://127.0.0.1:8000/snippets/ Accept:text/html         # Request HTML
+```
+or by appending a format suffix
+```
+http http://127.0.0.1:8000/snippets.json  # JSON suffix
+http http://127.0.0.1:8000/snippets.api   # Browsable API suffix
+```
+
+we can control the format of the request that we send, using the Content-Type header.
+```
+# POST using form data
+http --form POST http://127.0.0.1:8000/snippets/ code="print(123)"
+
+# POST using JSON
+http --json POST http://127.0.0.1:8000/snippets/ code="print(456)"
+```
+
+🎉Good Job
+
+
+
+
+
 
 
 

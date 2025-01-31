@@ -621,12 +621,233 @@ class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
 🎉Let's Celebrate
 
 
+## Authentication & Permissions
+Add the following two fields to the Snippet model in `models.py`:
 
+```
 
+...
 
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters.html import HtmlFormatter
+from pygments import highlight
 
+...
 
+class Snippet(models.Model):
 
+    ...
+
+    from pygments.lexers import get_lexer_by_name
+    from pygments.formatters.html import HtmlFormatter
+    from pygments import highlight
+
+    # Authentication and permission
+    owner = models.ForeignKey('auth.User', related_name='snippets', on_delete=models.CASCADE)
+    highlighted = models.TextField()
+
+    def save(self, *args, **kwargs):
+        """
+        Use the `pygments` library to create a highlighted HTML
+        representation of the code snippet.
+        """
+        lexer = get_lexer_by_name(self.language)
+        linenos = 'table' if self.linenos else False
+        options = {'title': self.title} if self.title else {}
+        formatter = HtmlFormatter(style=self.style, linenos=linenos,
+                                  full=True, **options)
+        self.highlighted = highlight(self.code, lexer, formatter)
+        super().save(*args, **kwargs)
+
+    ...
+
+```
+When that's all done we'll need to update our database tables. let's just delete the database and start again.
+```
+rm -f db.sqlite3
+rm -r snippets/migrations
+python manage.py makemigrations snippets
+python manage.py migrate
+```
+```
+python manage.py createsuperuser
+```
+### Adding endpoints for our User models
+In `serializers.py` add:
+```
+...
+
+from django.contrib.auth.models import User
+
+...
+
+class UserSerializer(serializers.ModelSerializer):
+    snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'snippets']
+
+```
+We'd like to just use read-only views for the user representations, so we'll use the ListAPIView and RetrieveAPIView generic class-based views.
+In `views.py`:
+```
+...
+
+from snippets.serializers import UserSerializer
+from django.contrib.auth.models import User
+
+...
+
+...
+
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+class UserDetail(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+```
+
+Finally we need to add those views into the API.
+in `snippets/urls.py`:
+```
+...
+
+urlpatterns = [
+    ...
+
+    path('users/', views.UserList.as_view()),
+    path('users/<int:pk>/', views.UserDetail.as_view()),
+]
+
+...
+
+```
+### Associating Snippets with Users
+Right now, if we created a code snippet, <mark>there'd be no way of associating the user that created the snippet</mark>, with the snippet instance. The user isn't sent as part of the serialized representation, but is instead a property of the incoming request.
+The way we deal with that is by overriding a .perform_create() method on our snippet views, that allows us to modify how the instance save is managed, and handle any information that is implicit in the incoming request or requested URL.
+inside `views.py` On the `SnippetList view clas`s, add the following method:
+```
+
+...
+
+class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+...
+
+```
+
+Add the following field to the serializer definition in serializers.py:
+```
+
+...
+
+class SnippetSerializer(serializers.ModelSerializer):
+    # Add
+    owner = serializers.ReadOnlyField(source='owner.username')
+
+    class Meta:
+        model = Snippet
+        fields = ['id', 'title', 'code', 'linenos', 'language', 'style', 'owner']
+
+...
+
+```
+### Adding required permissions to views
+update `views.py`:
+```
+
+...
+
+from rest_framework import permissions
+
+class SnippetList(generics.ListCreateAPIView):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+...
+
+```
+### Adding login to the Browsable API
+We can add a login view for use with the browsable API, by editing the URLconf in our project-level `urls.py` file.
+```
+...
+from django.urls import path, include
+
+urlpatterns = [
+    ...
+    path('api-auth/', include('rest_framework.urls')),
+]
+```
++ The 'api-auth/' part of pattern can actually be whatever URL you want to use.
+
+### Object level permissions
++ Really we'd like all code snippets to be visible to anyone, but also make sure that only the user that created a code snippet is able to update or delete it.
+create a new file, `permissions.py`:
+```
+from rest_framework import permissions
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    """
+    Custom permission to only allow owners of an object to edit it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Write permissions are only allowed to the owner of the snippet.
+        return obj.owner == request.user
+```
+Now we can add that custom permission to our snippet instance endpoint, by editing the permission_classes property inside `views.py` on the `SnippetDetail view class`:
+```
+
+...
+
+from rest_framework import permissions
+from snippets.permissions import IsOwnerOrReadOnly
+
+...
+
+class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
+    # Add
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,IsOwnerOrReadOnly]
+
+...
+
+```
+Now, if you open a browser again, you find that the 'DELETE' and 'PUT' actions only appear on a snippet instance endpoint if you're logged in as the same user that created the code snippet.
+
+### Authenticating with the API
++ Because we now have a set of permissions on the API, we need to authenticate our requests to it if we want to edit any snippets.
++ If we try to create a snippet without authenticating, we'll get an error:
+```
+http POST http://127.0.0.1:8000/snippets/ code="print(123)"
+```
+We can make a successful request by including the username and password of one of the users we created earlier.
+```
+http -a admin:password123 POST http://127.0.0.1:8000/snippets/ code="print(789)"
+```
+
+🎉Good Job
 
 
 

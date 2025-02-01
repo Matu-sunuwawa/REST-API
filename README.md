@@ -978,9 +978,124 @@ You'll also be able to see the 'highlight' links on the snippet instances, that 
 
 🎉Good job
 
+## ViewSets & Routers
++ `ViewSets`, that allows the developer to concentrate on modeling the state and interactions of the API, and leave the URL construction to be handled automatically.
 
+### Refactoring to use ViewSets
++ First of all let's refactor our UserList and UserDetail classes into a single UserViewSet class
+In the `snippets/views.py`:
+```
 
+...
 
+from rest_framework import viewsets
+
+...
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+```
++ Here we've used the ReadOnlyModelViewSet class to automatically provide the default 'read-only' operations.
++ 
+Next we're going to replace the SnippetList, SnippetDetail and SnippetHighlight view classes.
+```
+
+...
+
+from rest_framework import permissions
+from rest_framework import renderers
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+class SnippetViewSet(viewsets.ModelViewSet):
+    """
+    This ViewSet automatically provides `list`, `create`, `retrieve`,
+    `update` and `destroy` actions.
+
+    Additionally we also provide an extra `highlight` action.
+    """
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,
+                          IsOwnerOrReadOnly]
+
+    @action(detail=True, renderer_classes=[renderers.StaticHTMLRenderer])
+    def highlight(self, request, *args, **kwargs):
+        snippet = self.get_object()
+        return Response(snippet.highlighted)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+```
++ This time we've used the ModelViewSet class in order to get the complete set of default read and write operations.
++ Notice that we've also used the @action decorator to create a custom action, named highlight
+
+### Binding ViewSets to URLs explicitly
+In the `snippets/urls.py`:
+```
+...
+
+from rest_framework import renderers
+
+from snippets.views import api_root, SnippetViewSet, UserViewSet
+
+snippet_list = SnippetViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+snippet_detail = SnippetViewSet.as_view({
+    'get': 'retrieve',
+    'put': 'update',
+    'patch': 'partial_update',
+    'delete': 'destroy'
+})
+snippet_highlight = SnippetViewSet.as_view({
+    'get': 'highlight'
+}, renderer_classes=[renderers.StaticHTMLRenderer])
+user_list = UserViewSet.as_view({
+    'get': 'list'
+})
+user_detail = UserViewSet.as_view({
+    'get': 'retrieve'
+})
+
+urlpatterns = format_suffix_patterns([
+    path('', api_root),
+    path('snippets/', snippet_list, name='snippet-list'),
+    path('snippets/<int:pk>/', snippet_detail, name='snippet-detail'),
+    path('snippets/<int:pk>/highlight/', snippet_highlight, name='snippet-highlight'),
+    path('users/', user_list, name='user-list'),
+    path('users/<int:pk>/', user_detail, name='user-detail')
+])
+```
+
+### Using Routers
++ Because we're using ViewSet classes rather than View classes, we actually don't need to design the URL conf ourselves.
+in `urls.py`:
+```
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from snippets import views
+
+router = DefaultRouter()
+router.register(r'snippets', views.SnippetViewSet, basename='snippet')
+router.register(r'users', views.UserViewSet, basename='user')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+```
+
+If we open a browser and navigate to the browsable API, you'll find that you can now work your way around the API simply by following links.
+You'll also be able to see the 'highlight' links on the snippet instances, that will take you to the highlighted code HTML representations.
+
+🎉Good job
 
 
 

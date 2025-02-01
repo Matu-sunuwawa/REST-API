@@ -976,8 +976,7 @@ REST_FRAMEWORK = {
 If we open a browser and navigate to the browsable API, you'll find that you can now work your way around the API simply by following links.
 You'll also be able to see the 'highlight' links on the snippet instances, that will take you to the highlighted code HTML representations.
 
-
-
+🎉Good job
 
 
 

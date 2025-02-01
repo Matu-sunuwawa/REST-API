@@ -621,7 +621,7 @@ class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
 🎉Let's Celebrate
 
 
-## Authentication & Permissions
+## Authentication & Permissions (Tutorials 4)
 Add the following two fields to the Snippet model in `models.py`:
 
 ```
@@ -848,6 +848,135 @@ http -a admin:password123 POST http://127.0.0.1:8000/snippets/ code="print(789)"
 ```
 
 🎉Good Job
+
+
+## Relationships & Hyperlinked APIs (Tutorials 5)
++ improve the cohesion and discoverability of our API, by instead using `hyperlinking` for relationships.
+
+### Creating an endpoint for the root of our API
++ To create `single entry point to our API`, we'll use a regular function-based view and the @api_view decorator we introduced earlier
++ in `snippets/views.py`:
+```
+
+...
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.reverse import reverse
+
+...
+
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+        'users': reverse('user-list', request=request, format=format),
+        'snippets': reverse('snippet-list', request=request, format=format)
+    })
+```
+Two things should be noticed here. 
++ First, we're using REST framework's reverse function in order to return fully-qualified URLs;
++ second, URL patterns are identified by convenience names that we will declare later on in our snippets/urls.py.
+
+### Creating an endpoint for the highlighted snippets
++ Instead of using a `concrete generic view`, we'll use the base class for representing instances, and create our own .get() method. In your `snippets/views.py` add:
+```
+
+...
+
+from rest_framework import renderers
+
+...
+
+class SnippetHighlight(generics.GenericAPIView):
+    queryset = Snippet.objects.all()
+    renderer_classes = [renderers.StaticHTMLRenderer]
+
+    def get(self, request, *args, **kwargs):
+        snippet = self.get_object()
+        return Response(snippet.highlighted)
+```
+in `snippets/urls.py`:
+```
+path('', views.api_root),
+# add a url pattern for the snippet highlights:
+path('snippets/<int:pk>/highlight/', views.SnippetHighlight.as_view()),
+```
+### Hyperlinking our API
+There are a number of different ways that we might choose to represent a relationship between entities:
++ Using `primary keys`.
++ ==>Using `hyperlinking` between entities.
++ Using a unique identifying `slug field` on the related entity.
++ Using the default `string representation` of the related entity.
++ Nesting the `related entity` inside the parent representation.
++ Some other custom representation.
+Replace HyperlinkedModelSerializer instead of ModelSerializer
+The `HyperlinkedModelSerializer` has the following differences from `ModelSerializer`:
++ It does not include the id field by default.
++ It includes a url field, using HyperlinkedIdentityField.
+Relationships use `HyperlinkedRelatedField`, instead of `PrimaryKeyRelatedField`.
+
+We can easily re-write our existing serializers to use hyperlinking. In your snippets/serializers.py add:
+```
+
+...
+
+class SnippetSerializer(serializers.HyperlinkedModelSerializer):
+    owner = serializers.ReadOnlyField(source='owner.username')
+    highlight = serializers.HyperlinkedIdentityField(view_name='snippet-highlight', format='html')
+
+    class Meta:
+        model = Snippet
+        fields = ['url', 'id', 'highlight', 'owner','title', 'code', 'linenos', 'language', 'style']
+
+
+class UserSerializer(serializers.HyperlinkedModelSerializer):
+    snippets = serializers.HyperlinkedRelatedField(many=True, view_name='snippet-detail', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['url', 'id', 'username', 'snippets']
+```
+### Making sure our URL patterns are named
+`snippets/urls.py`:
+```
+from django.urls import path
+from rest_framework.urlpatterns import format_suffix_patterns
+from snippets import views
+
+# API endpoints
+urlpatterns = format_suffix_patterns([
+    path('', views.api_root),
+    path('snippets/',
+        views.SnippetList.as_view(),
+        name='snippet-list'),
+    path('snippets/<int:pk>/',
+        views.SnippetDetail.as_view(),
+        name='snippet-detail'),
+    path('snippets/<int:pk>/highlight/',
+        views.SnippetHighlight.as_view(),
+        name='snippet-highlight'),
+    path('users/',
+        views.UserList.as_view(),
+        name='user-list'),
+    path('users/<int:pk>/',
+        views.UserDetail.as_view(),
+        name='user-detail')
+])
+```
+modifying our `tutorial/settings.py`:
+```
+
+...
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+```
+If we open a browser and navigate to the browsable API, you'll find that you can now work your way around the API simply by following links.
+You'll also be able to see the 'highlight' links on the snippet instances, that will take you to the highlighted code HTML representations.
+
+
 
 
 

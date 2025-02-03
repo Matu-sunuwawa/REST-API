@@ -560,7 +560,7 @@ urlpatterns = format_suffix_patterns(urlpatterns)
 
 ### <mark>Using mixins</mark>
 + One of the big wins of using class-based views is that it allows us to easily compose reusable bits of behavior.
-replace `snippets/urls.py`:
+replace `snippets/views.py`:
 ```
 from snippets.models import Snippet
 from snippets.serializers import SnippetSerializer

@@ -638,10 +638,6 @@ class Snippet(models.Model):
 
     ...
 
-    from pygments.lexers import get_lexer_by_name
-    from pygments.formatters.html import HtmlFormatter
-    from pygments import highlight
-
     # Authentication and permission
     owner = models.ForeignKey('auth.User', related_name='snippets', on_delete=models.CASCADE)
     highlighted = models.TextField()
@@ -731,6 +727,7 @@ The way we deal with that is by overriding a .perform_create() method on our sni
 inside `views.py` On the `SnippetList view clas`s, add the following method:
 ```
 
+from rest_framework import permissions
 ...
 
 class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):

@@ -912,7 +912,7 @@ The `HyperlinkedModelSerializer` has the following differences from `ModelSerial
 + It includes a url field, using HyperlinkedIdentityField.
 Relationships use `HyperlinkedRelatedField`, instead of `PrimaryKeyRelatedField`.
 
-We can easily re-write our existing serializers to use hyperlinking. In your snippets/serializers.py add:
+We can easily re-write our existing serializers to use hyperlinking. In your `snippets/serializers.py` add:
 ```
 
 ...
@@ -975,7 +975,7 @@ You'll also be able to see the 'highlight' links on the snippet instances, that 
 
 🎉Good job
 
-## ViewSets & Routers
+## ViewSets & Routers (Tutorials 6)
 + `ViewSets`, that allows the developer to concentrate on modeling the state and interactions of the API, and leave the URL construction to be handled automatically.
 
 ### Refactoring to use ViewSets
